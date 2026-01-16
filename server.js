@@ -2,12 +2,20 @@ import express from "express";
 import cors from "cors";
 import fetch from "node-fetch";
 import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+
+// 📦 SERVE O FRONTEND
+app.use(express.static(path.join(__dirname, "public")));
 
 // 🔐 GROQ API KEY
 let GROQ_API_KEY = process.env.GROQ_API_KEY;
@@ -21,9 +29,9 @@ if (!GROQ_API_KEY) {
   process.exit(1);
 }
 
-// rota raiz
+// rota raiz → HTML do chat
 app.get("/", (req, res) => {
-  res.send("Manus-like está vivo 🚀");
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 // rota de chat
