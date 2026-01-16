@@ -1,36 +1,117 @@
-import express from "express";
-import "dotenv/config";
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Manus-like</title>
+  <style>
+    body {
+      background: #0f0f14;
+      color: #eaeaea;
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
 
-const app = express();
-app.use(express.json());
+    .chat {
+      width: 90%;
+      max-width: 800px;
+      height: 80vh;
+      background: #181820;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 0 20px rgba(0,0,0,.6);
+    }
 
-app.get("/", (req, res) => {
-  res.send("Manus-like está vivo 🚀");
-});
+    .messages {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
 
-app.post("/chat", async (req, res) => {
-  const userMessage = req.body.message;
+    .user {
+      color: #7dd3fc;
+      margin-bottom: 12px;
+    }
 
-  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model: "llama-3.1-70b-versatile",
-      messages: [
-        {
-          role: "system",
-          content: "Você é um assistente que ajuda a programar."
-        },
-        { role: "user", content: userMessage }
-      ]
-    })
-  });
+    .ai {
+      color: #a7f3d0;
+      margin-bottom: 24px;
+    }
 
-  const data = await response.json();
-  res.json({ answer: data.choices[0].message.content });
-});
+    .input {
+      display: flex;
+      border-top: 1px solid #333;
+    }
 
-app.listen(3000);
+    textarea {
+      flex: 1;
+      padding: 14px;
+      background: #111;
+      color: #fff;
+      border: none;
+      resize: none;
+      font-size: 15px;
+      outline: none;
+    }
+
+    button {
+      width: 120px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+  </style>
+</head>
+<body>
+
+<div class="chat">
+  <div class="messages" id="messages"></div>
+  <div class="input">
+    <textarea id="input" rows="2" placeholder="Digite sua pergunta de programação..."></textarea>
+    <button onclick="send()">Enviar</button>
+  </div>
+</div>
+
+<script>
+  const messages = document.getElementById("messages");
+  const input = document.getElementById("input");
+
+  async function send() {
+    const text = input.value.trim();
+    if (!text) return;
+
+    messages.innerHTML += `<div class="user"><b>Você:</b>\n${text}</div>`;
+    input.value = "";
+    messages.scrollTop = messages.scrollHeight;
+
+    try {
+      const res = await fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text })
+      });
+
+      const data = await res.json();
+      messages.innerHTML += `<div class="ai"><b>Manus:</b>\n${data.reply}</div>`;
+      messages.scrollTop = messages.scrollHeight;
+
+    } catch (e) {
+      messages.innerHTML += `<div class="ai">Erro ao falar com o servidor.</div>`;
+    }
+  }
+</script>
+
+</body>
+</html>
