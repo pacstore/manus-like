@@ -48,11 +48,12 @@ app.post("/chat", async (req, res) => {
         },
         body: JSON.stringify({
           model: "llama3-8b-8192",
+          temperature: 0.7,
           messages: [
             {
               role: "system",
               content:
-                "Você é um assistente especialista em programação. Responda de forma clara e objetiva."
+                "Você é um assistente de programação. Responda normalmente, em português."
             },
             {
               role: "user",
@@ -65,22 +66,32 @@ app.post("/chat", async (req, res) => {
 
     const data = await groqResponse.json();
 
-    // 🔍 LOG PARA DEBUG (importantíssimo)
-    console.log("Groq response:", JSON.stringify(data, null, 2));
+    // 🔎 LOG COMPLETO (ESSENCIAL)
+    console.log("🔍 Groq RAW response:");
+    console.log(JSON.stringify(data, null, 2));
 
-    if (!data.choices || !data.choices[0]) {
+    // ❌ erro explícito da Groq
+    if (data.error) {
       return res.json({
-        reply:
-          "A IA não retornou resposta. Verifique modelo ou limite da API."
+        reply: `Erro Groq: ${data.error.message}`
       });
     }
 
+    // ❌ sem choices
+    if (!data.choices || !data.choices[0]) {
+      return res.json({
+        reply:
+          "Groq respondeu sem conteúdo. Sua API pode estar sem acesso ao modelo."
+      });
+    }
+
+    // ✅ sucesso
     res.json({
       reply: data.choices[0].message.content
     });
   } catch (err) {
-    console.error("Erro no /chat:", err);
-    res.status(500).json({ error: "Erro ao falar com a IA" });
+    console.error("🔥 Erro no /chat:", err);
+    res.status(500).json({ error: "Erro interno no servidor" });
   }
 });
 
