@@ -1,34 +1,120 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8" />
   <title>Manus-like</title>
+
+  <style>
+    body {
+      background: #0f0f14;
+      color: #eaeaea;
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .chat {
+      width: 90%;
+      max-width: 800px;
+      height: 80vh;
+      background: #181820;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 0 20px rgba(0,0,0,.6);
+    }
+
+    .messages {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+
+    .user {
+      color: #7dd3fc;
+      margin-bottom: 12px;
+    }
+
+    .ai {
+      color: #a7f3d0;
+      margin-bottom: 24px;
+    }
+
+    .input {
+      display: flex;
+      border-top: 1px solid #333;
+    }
+
+    textarea {
+      flex: 1;
+      padding: 14px;
+      background: #111;
+      color: #fff;
+      border: none;
+      resize: none;
+      font-size: 15px;
+      outline: none;
+    }
+
+    button {
+      width: 120px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+  </style>
 </head>
+
 <body>
 
-<h2>Manus-like (IA para programar)</h2>
+<div class="chat">
+  <div class="messages" id="messages"></div>
 
-<textarea id="msg" rows="6" cols="60"
-  placeholder="Digite sua pergunta..."></textarea>
-<br><br>
-
-<button onclick="send()">Enviar</button>
-
-<pre id="resp"></pre>
+  <div class="input">
+    <textarea id="input" rows="2" placeholder="Digite sua pergunta de programação..."></textarea>
+    <button onclick="send()">Enviar</button>
+  </div>
+</div>
 
 <script>
-async function send() {
-  const msg = document.getElementById("msg").value;
+  const messages = document.getElementById("messages");
+  const input = document.getElementById("input");
 
-  const res = await fetch("/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message: msg })
-  });
+  async function send() {
+    const text = input.value.trim();
+    if (!text) return;
 
-  const data = await res.json();
-  document.getElementById("resp").textContent = data.answer;
-}
+    messages.innerHTML += `<div class="user"><b>Você:</b><br>${text}</div>`;
+    input.value = "";
+    messages.scrollTop = messages.scrollHeight;
+
+    try {
+      const res = await fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text })
+      });
+
+      const data = await res.json();
+
+      messages.innerHTML += `<div class="ai"><b>Manus:</b><br>${data.reply}</div>`;
+      messages.scrollTop = messages.scrollHeight;
+
+    } catch (e) {
+      messages.innerHTML += `<div class="ai">Erro ao falar com o servidor.</div>`;
+    }
+  }
 </script>
 
 </body>
