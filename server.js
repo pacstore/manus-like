@@ -2,15 +2,12 @@ import express from "express";
 import cors from "cors";
 import fetch from "node-fetch";
 import fs from "fs";
-import path from "path";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const __dirname = process.cwd();
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(__dirname));
 
 // 🔐 GROQ API KEY
 let GROQ_API_KEY = process.env.GROQ_API_KEY;
@@ -24,12 +21,12 @@ if (!GROQ_API_KEY) {
   process.exit(1);
 }
 
-// 🌐 frontend
+// rota raiz
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
+  res.send("Manus-like está vivo 🚀");
 });
 
-// 💬 chat
+// rota de chat
 app.post("/chat", async (req, res) => {
   try {
     const { message } = req.body;
@@ -38,7 +35,7 @@ app.post("/chat", async (req, res) => {
       return res.status(400).json({ error: "Mensagem vazia" });
     }
 
-    const groqResponse = await fetch(
+    const response = await fetch(
       "https://api.groq.com/openai/v1/chat/completions",
       {
         method: "POST",
@@ -48,5 +45,38 @@ app.post("/chat", async (req, res) => {
         },
         body: JSON.stringify({
           model: "llama-3.1-8b-instant",
-          temperature: 0.6,
-          messages:
+          messages: [
+            {
+              role: "system",
+              content: "Você é um assistente que ajuda a programar."
+            },
+            {
+              role: "user",
+              content: message
+            }
+          ]
+        })
+      }
+    );
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("Erro Groq:", errText);
+      return res.status(500).json({ error: "Erro na Groq API" });
+    }
+
+    const data = await response.json();
+
+    res.json({
+      reply: data.choices?.[0]?.message?.content || "Sem resposta da IA"
+    });
+
+  } catch (err) {
+    console.error("Erro geral:", err);
+    res.status(500).json({ error: "Erro ao falar com a IA" });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
+});
