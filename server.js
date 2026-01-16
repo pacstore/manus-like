@@ -2,14 +2,19 @@ import express from "express";
 import cors from "cors";
 import fetch from "node-fetch";
 import fs from "fs";
+import path from "path";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// middlewares
 app.use(cors());
 app.use(express.json());
 
-// 🔐 Lê a GROQ_API_KEY (env OU secret em arquivo)
+// caminho absoluto
+const __dirname = process.cwd();
+
+// 🔐 GROQ_API_KEY (env ou secrets)
 let GROQ_API_KEY = process.env.GROQ_API_KEY;
 
 if (!GROQ_API_KEY && fs.existsSync("/secrets/GROQ_API_KEY")) {
@@ -17,16 +22,19 @@ if (!GROQ_API_KEY && fs.existsSync("/secrets/GROQ_API_KEY")) {
 }
 
 if (!GROQ_API_KEY) {
-  console.error("❌ GROQ_API_KEY não encontrada (env nem /secrets)");
+  console.error("❌ GROQ_API_KEY não encontrada");
   process.exit(1);
 }
 
-// rota raiz (health check)
+// 🌐 servir frontend
+app.use(express.static(__dirname));
+
+// rota principal → abre o chat
 app.get("/", (req, res) => {
-  res.send("Manus-like está vivo 🚀");
+  res.sendFile(path.join(__dirname, "index.html"));
 });
 
-// rota de chat
+// rota chat
 app.post("/chat", async (req, res) => {
   try {
     const { message } = req.body;
@@ -48,7 +56,8 @@ app.post("/chat", async (req, res) => {
           messages: [
             {
               role: "system",
-              content: "Você é um assistente que ajuda a programar."
+              content:
+                "Você é um assistente sênior de programação. Explique com clareza e exemplos."
             },
             {
               role: "user",
@@ -59,24 +68,18 @@ app.post("/chat", async (req, res) => {
       }
     );
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("Erro Groq:", errText);
-      return res.status(500).json({ error: "Erro na Groq API" });
-    }
-
     const data = await response.json();
 
     res.json({
-      reply: data.choices?.[0]?.message?.content || "Sem resposta da IA"
+      reply: data.choices?.[0]?.message?.content || "Sem resposta"
     });
-
   } catch (err) {
-    console.error("Erro geral:", err);
+    console.error(err);
     res.status(500).json({ error: "Erro ao falar com a IA" });
   }
 });
 
+// start
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
