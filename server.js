@@ -6,15 +6,13 @@ import path from "path";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-// middlewares
-app.use(cors());
-app.use(express.json());
-
-// caminho absoluto
 const __dirname = process.cwd();
 
-// 🔐 GROQ_API_KEY (env ou secrets)
+app.use(cors());
+app.use(express.json());
+app.use(express.static(__dirname));
+
+// 🔐 GROQ API KEY
 let GROQ_API_KEY = process.env.GROQ_API_KEY;
 
 if (!GROQ_API_KEY && fs.existsSync("/secrets/GROQ_API_KEY")) {
@@ -26,15 +24,12 @@ if (!GROQ_API_KEY) {
   process.exit(1);
 }
 
-// 🌐 servir frontend
-app.use(express.static(__dirname));
-
-// rota principal → abre o chat
+// 🌐 frontend
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
-// rota chat
+// 💬 chat
 app.post("/chat", async (req, res) => {
   try {
     const { message } = req.body;
@@ -43,7 +38,7 @@ app.post("/chat", async (req, res) => {
       return res.status(400).json({ error: "Mensagem vazia" });
     }
 
-    const response = await fetch(
+    const groqResponse = await fetch(
       "https://api.groq.com/openai/v1/chat/completions",
       {
         method: "POST",
@@ -52,12 +47,12 @@ app.post("/chat", async (req, res) => {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          model: "llama3-70b-8192",
+          model: "llama3-8b-8192",
           messages: [
             {
               role: "system",
               content:
-                "Você é um assistente sênior de programação. Explique com clareza e exemplos."
+                "Você é um assistente especialista em programação. Responda de forma clara e objetiva."
             },
             {
               role: "user",
@@ -68,18 +63,28 @@ app.post("/chat", async (req, res) => {
       }
     );
 
-    const data = await response.json();
+    const data = await groqResponse.json();
+
+    // 🔍 LOG PARA DEBUG (importantíssimo)
+    console.log("Groq response:", JSON.stringify(data, null, 2));
+
+    if (!data.choices || !data.choices[0]) {
+      return res.json({
+        reply:
+          "A IA não retornou resposta. Verifique modelo ou limite da API."
+      });
+    }
 
     res.json({
-      reply: data.choices?.[0]?.message?.content || "Sem resposta"
+      reply: data.choices[0].message.content
     });
   } catch (err) {
-    console.error(err);
+    console.error("Erro no /chat:", err);
     res.status(500).json({ error: "Erro ao falar com a IA" });
   }
 });
 
-// start
+// 🚀 start
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
